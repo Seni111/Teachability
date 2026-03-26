@@ -30,4 +30,3 @@ class TestAdd:
 
     def test_add_with_zero(self):
         assert add(5, 0) == 5
-
