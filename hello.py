@@ -11,5 +11,3 @@ def add(a: int, b: int) -> int:
 if __name__ == "__main__":
     print(greet("World"))
     print(f"5 + 3 = {add(5, 3)}")
-
-
