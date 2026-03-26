@@ -1,4 +1,5 @@
 name: Advanced Workflow CI
+
 on:
   push:
     branches: [ main ]
@@ -10,66 +11,74 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black
-      - name: Lint with flake8
-        run: |
-          flake8 .
-      - name: Format with black
-        run: |
-          black --check .
-      - name: cache pip dependencies
+
+      - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint with flake8
+        run: flake8 .
+
+      - name: Format check with black
+        run: black --check .
 
   test-matrix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, 3.10, 3.11, 3.12]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-      - name: Run tests
-        run: |
-          pytest
-      - name: cache pip dependencies
+
+      - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}-${{ matrix.python-version }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -v --junitxml=test-results.xml
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.python-version }}
+          path: test-results.xml
+          retention-days: 7
 
-          
   deploy-simulation:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint, test-matrix]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Simulate Deployment
         run: echo "Simulating deployment to production environment..."
-  
